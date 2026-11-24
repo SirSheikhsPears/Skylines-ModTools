@@ -16,7 +16,7 @@ Download `ModTools-3.8.1-INSTALL.zip` from [Releases](https://github.com/SirShei
 
 Extract its contents into:
 
-`%LOCALAPPDATA%\Colossal Order\Cities_Skylines\Addons\Mods\ModTools`
+`%LOCALAPPDATA%\Colossal Order\Cities_Skylines\Addons\Mods\`
 
 Disable or unsubscribe from other versions of ModTools before use.
 
