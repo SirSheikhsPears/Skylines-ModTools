@@ -4,32 +4,26 @@
     <TargetFramework>net35</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CodeAnalysisRuleSet></CodeAnalysisRuleSet>
-    <Deterministic>false</Deterministic>
-    <AssemblyVersion>3.8.0.*</AssemblyVersion>
+    <Deterministic>true</Deterministic>
+    <Version>3.9.0</Version>
+    <AssemblyVersion>$(Version).0</AssemblyVersion>
+    <FileVersion>$(AssemblyVersion)</FileVersion>
+    <InformationalVersion>$(Version)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <FileAlignment>512</FileAlignment>
     <LangVersion>latest</LangVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <PathMap>$(MSBuildProjectDirectory)/=$(ProjectName)/</PathMap>
-    <Configurations>Debug;Release;Workshop;Workshop2</Configurations>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Workshop|AnyCPU' ">
-    <ContentID>450877484</ContentID>
-    <DefineConstants />
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Workshop2|AnyCPU' ">
-    <ContentID>2434651215</ContentID>
-    <DefineConstants />
+    <Configurations>Debug;Release</Configurations>
   </PropertyGroup>
   <PropertyGroup>
-    <ManagedDLLPath>../dependencies</ManagedDLLPath>
-    <SteamPath>C:/Games/Steam</SteamPath>
-    <SteamPath Condition="! Exists ('$(SteamPath)')">~/Library/Application Support/Steam/</SteamPath>
+    <SteamPath Condition="'$(SteamPath)' == ''">$(Registry:HKEY_CURRENT_USER\Software\Valve\Steam@SteamPath)</SteamPath>
+    <SteamPath Condition="! Exists ('$(SteamPath)')">C:/Games/Steam</SteamPath>
     <SteamPath Condition="! Exists ('$(SteamPath)')">$(ProgramFiles)/Steam</SteamPath>
-    <SteamPath Condition="! Exists ('$(SteamPath)')">$(Registry:HKEY_CURRENT_USER\Software\Valve\Steam@SteamPath)</SteamPath>
-    <CSPath>$(SteamPath)/steamapps/common/Cities_Skylines</CSPath>
-    <ContentPath>$(SteamPath)/steamapps/workshop/content/255710/$(ContentID)</ContentPath>
-    <ManagedDLLPath Condition="!  Exists ('$(ManagedDLLPath)')">$(CSPath)/Cities_Data/Managed</ManagedDLLPath>
+    <SteamPath Condition="! Exists ('$(SteamPath)')">~/Library/Application Support/Steam/</SteamPath>
+    <CSPath Condition="'$(CSPath)' == ''">$(SteamPath)/steamapps/common/Cities_Skylines</CSPath>
+    <ManagedDLLPath Condition="'$(ManagedDLLPath)' == ''">$(CSPath)/Cities_Data/Managed</ManagedDLLPath>
     <AssemblySearchPaths>
       $(AssemblySearchPaths);
       $(ManagedDLLPath);
@@ -62,7 +56,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Mono.Unofficial.pdb2mdb" Version="4.2.3.4" />
-    <PackageReference Include="GitInfo" Version="3.0.6">
+    <PackageReference Include="GitInfo" Version="3.1.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -73,7 +67,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <Target Name="DeployToModDirectory" AfterTargets="Build">
+  <Target Name="DeployToModDirectory" AfterTargets="Build" Condition="'$(DeployDir)' != ''">
     <Message Importance="high" Text="DeployToModDirectory ..." />
     <GetAssemblyIdentity AssemblyFiles="$(TargetPath)">
       <Output TaskParameter="Assemblies" ItemName="Targets" />
@@ -83,15 +77,12 @@
       <VersionNumber Include="@(Targets->'%(Version)')" />
     </ItemGroup>
     <PropertyGroup>
-      <DeployDir Condition="'$(DeployDir)'==''">$(LOCALAPPDATA)/Colossal Order/Cities_Skylines/Addons/Mods/$(ProjectName)/</DeployDir>
       <Now>$([System.DateTime]::Now.ToString("HH:mm:ss"))</Now>
       <pdb2mdb>$(PkgMono_Unofficial_pdb2mdb)/tools/pdb2mdb.exe</pdb2mdb>
       <ZipFileName>$(ProjectName)-V@(VersionNumber)-$(GitCommit)-$(Configuration).zip</ZipFileName>
       <ZipFile>$(DeployDir)/../$(ZipFileName)</ZipFile>
     </PropertyGroup>
-    <ItemGroup>
-      <OldZipFiles Include="$(DeployDir)/../$(ProjectName)-*-$(Configuration).zip" />
-    </ItemGroup>
+    <Error Condition="Exists('$(ZipFile)')" Text="Archive already exists: $(ZipFile)" />
 
     <Delete Files="$(TargetPath).mdb" />
     <Exec Command="&quot;$(pdb2mdb)&quot; &quot;$(TargetPath)&quot;" />
@@ -99,24 +90,6 @@
     <Delete Files="$(DeployDir)$(TargetFileName)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DeployDir)" />
     <Message Importance="high" Text="AssemblyVersion=@(VersionNumber) time=$(Now)" />
-    <Delete Files="@(OldZipFiles)" />
     <ZipDirectory SourceDirectory="$(DeployDir)" DestinationFile="$(ZipFile)" />
-  </Target>
-  <Target Name="DeployToWorkshop" AfterTargets="DeployToModDirectory" Condition="'$(ContentID)'!=''">
-    <ItemGroup>
-      <FilesToCopy Include="$(DeployDir)/*.*" />
-    </ItemGroup>
-    <RemoveDir Directories="$(ContentPath)" />
-    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ContentPath)" />
-    <RemoveDir Directories="$(DeployDir)" />
-    <Message Importance="high" Text="Moved to $(ContentPath)" />
-  </Target>
-  <Target Name="CustomClean" BeforeTargets="CoreClean">
-    <RemoveDir Directories="$(TargetDir)" />
-    <PropertyGroup>
-      <DeployDir>$(LOCALAPPDATA)/Colossal Order/Cities_Skylines/Addons/Mods/$(ProjectName)/</DeployDir>
-    </PropertyGroup>
-    <Message Text="removing deploy directory" Importance="high" />
-    <RemoveDir Directories="$(DeployDir)" />
   </Target>
 </Project>
